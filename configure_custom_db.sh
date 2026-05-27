@@ -7,7 +7,7 @@ set -euo pipefail
 # =========================
 DB_USER="odk"
 DB_PASSWORD="postgres-odk"
-DB_NAME="odk_database_chickenkiller"
+DB_NAME="odk_database"
 # =========================
 
 echo "🚀 Iniciando configuración de base de datos Postgres 16"

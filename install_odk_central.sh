@@ -5,12 +5,12 @@ set -euo pipefail
 # CONFIGURACIÓN INICIAL
 # EDITA ESTO ANTES DE CORRER
 # =========================
-DOMAIN="alcaldia-odk-prod.chickenkiller.com"
-SYSADMIN_EMAIL="sampleuser@demo.com"
-DB_HOST="10.128.0.8"
-DB_USER="odk_usr_user"
-DB_PASSWORD="postgres-odk"
-DB_NAME="odk_heva"
+DOMAIN="medicionservicio.alcaldiabogota.gov.co"
+SYSADMIN_EMAIL="medicionservicio@alcaldiabogota.gov.co"
+PGHOST="<<SUSTITUIR POR LA IP INTERNA DE LA BASE DE DATOS POSTGRESQL>>"
+PGUSER="odk"
+PGPASSWORD="postgres-odk"
+PGDATABASE="odk_database"
 # =========================
 
 echo "🚀 Iniciando instalación de ODK Central"
@@ -44,7 +44,7 @@ sudo ufw disable || true
 
 # Clonar ODK Central
 umask 022
-git clone https://github.com/getodk/central
+git clone https://SGAMB@dev.azure.com/SGAMB/HEVA%20-%20Plataforma%20Digital%20%C3%9Anica/_git/DDCS-Central central
 cd central
 
 git submodule update -i
@@ -52,13 +52,18 @@ git submodule update -i
 # Configurar entorno
 cp .env.template .env
 
+# Configurar certificados SSL personalizados
+cp ../certs/fullchain.pem ./files/local/customssl/fullchain.pem
+cp ../certs/privkey.pem ./files/local/customssl/privkey.pem
+
 sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|" .env
 sed -i "s|^SYSADMIN_EMAIL=.*|SYSADMIN_EMAIL=$SYSADMIN_EMAIL|" .env
+sed -i "s|^SSL_TYPE=.*|SSL_TYPE=customssl|" .env
 
-sed -i "s|^# DB_HOST=.*|DB_HOST=$DB_HOST|" .env
-sed -i "s|^# DB_USER=.*|DB_USER=$DB_USER|" .env
-sed -i "s|^# DB_PASSWORD=.*|DB_PASSWORD=$DB_PASSWORD|" .env
-sed -i "s|^# DB_NAME=.*|DB_NAME=$DB_NAME|" .env
+sed -i "s|^# PGHOST=.*|PGHOST=$PGHOST|" .env
+sed -i "s|^# PGUSER=.*|PGUSER=$PGUSER|" .env
+sed -i "s|^# PGPASSWORD=.*|PGPASSWORD=$PGPASSWORD|" .env
+sed -i "s|^# PGDATABASE=.*|PGDATABASE=$PGDATABASE|" .env
 
 # Flag requerido para Postgres
 touch ./files/allow-postgres14-upgrade
@@ -67,15 +72,18 @@ touch ./files/allow-postgres14-upgrade
 sudo docker compose build
 sudo docker compose up -d
 
-# Detener el servicio para uso de base de datos personalizada externa
-sudo docker compose build service && \
-sudo docker compose stop service && \
-sudo docker compose up -d service
+# Detener el servicio para uso de parámetros actualizados personalizados
+#sudo docker compose build service && \
+#sudo docker compose stop service && \
+#sudo docker compose up -d service
 
 # Estado final
 sudo docker compose ps
 
 # Crear el usuario administrador y elevar sus privilegios
+echo " "
+echo "👤 Registrando $SYSADMIN_EMAIL como correo administrador..."
+echo "📝 Ingresa una contraseña (mínimo 8 caracteres: debe contener letras y números)"
 sudo docker compose exec service odk-cmd --email $SYSADMIN_EMAIL user-create
 sudo docker compose exec service odk-cmd --email $SYSADMIN_EMAIL user-promote
 
